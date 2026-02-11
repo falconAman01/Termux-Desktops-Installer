@@ -103,7 +103,7 @@ Terminal startup banner:
 Run installer:
 
 ``` bash
-bash aman-final.sh
+bash desktop_install.sh
 ```
 
 Start desktop:
@@ -126,14 +126,6 @@ kali
 -   Stable internet connection
 -   Recommended free storage: **6GB -- 10GB**
 -   ARM64 device recommended
-
-------------------------------------------------------------------------
-
-## 📂 Project Structure
-
-    aman-final.sh        # Main installer
-    start-desktop.sh     # GUI launcher
-    start-kali.sh        # Kali NetHunter launcher
 
 ------------------------------------------------------------------------
 
