@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-VERSION="3.2"
+VERSION="3.3"
 
 G='\033[1;32m';Y='\033[1;33m';C='\033[1;36m';R='\033[1;31m';NC='\033[0m'
 trap 'echo -e "${R}[ERROR] Installer stopped safely${NC}"' ERR
@@ -28,7 +28,7 @@ termux-setup-storage || true
 pkg update -y || true
 pkg install -y x11-repo tur-repo pulseaudio proot-distro wget git curl || true
 
-# ---- auto detect termux-x11 package ----
+# ===== AUTO DETECT TERMUX X11 =====
 if pkg search termux-x11-nightly >/dev/null 2>&1; then
  pkg install -y termux-x11-nightly || pkg install -y termux-x11 || true
 else
@@ -46,26 +46,31 @@ EOF
 clear
 echo -e "${C}Available Proot Distros:${NC}"
 
-mapfile -t DISTROS < <(proot-distro list | grep "<" | sed -E 's/.*< ([^ ]+) >/\1/')
+mapfile -t DISTROS < <(proot-distro list | grep -E '\* ' | sed -E 's/.*< ([^ ]+) >/\1/')
 
-count=1
-for distro in "${DISTROS[@]}"; do
- echo "$count) $distro"
- ((count++))
+if [ "${#DISTROS[@]}" -eq 0 ]; then
+ echo -e "${R}Failed to load distro list${NC}"
+ exit 1
+fi
+
+num=1
+for d in "${DISTROS[@]}"; do
+ echo "$num) $d"
+ ((num++))
 done
 
-echo -e "${R}$count) kali nethunter${NC}"
+echo -e "${R}$num) kali nethunter${NC}"
 echo ""
 read -p "Choice (number): " dchoice
 
-# ========= INPUT VALIDATION =========
+# ========= VALIDATION =========
 if ! [[ "$dchoice" =~ ^[0-9]+$ ]]; then
- echo -e "${R}Invalid input!${NC}"
+ echo -e "${R}Invalid input${NC}"
  exit 1
 fi
 
 # ========= KALI OPTION =========
-if [ "$dchoice" -eq "$count" ]; then
+if [ "$dchoice" -eq "$num" ]; then
 
 echo -e "${Y}Installing Kali NetHunter...${NC}"
 
@@ -73,7 +78,6 @@ wget -O install-nethunter-termux https://offs.ec/2MceZWr
 chmod +x install-nethunter-termux
 ./install-nethunter-termux
 
-# ===== YOUR ORIGINAL START SCRIPT =====
 cat << 'EOF' > start-kali.sh
 #!/data/data/com.termux/files/usr/bin/bash -e
 cd ${HOME}
@@ -130,13 +134,8 @@ fi
 
 # ========= SELECT DISTRO =========
 index=$((dchoice-1))
-
-if [ "$index" -lt 0 ] || [ "$index" -ge "${#DISTROS[@]}" ]; then
- echo -e "${R}Invalid choice number${NC}"
- exit 1
-fi
-
 DISTRO="${DISTROS[$index]}"
+
 echo -e "${G}Selected: $DISTRO${NC}"
 
 # ========= DESKTOP MENU =========
@@ -160,15 +159,15 @@ case $dechoice in
 *) echo "Invalid"; exit 1;;
 esac
 
-proot-distro list | grep -q "$DISTRO" || proot-distro install "$DISTRO"
+proot-distro install "$DISTRO" || true
 
 install_desktop(){
 if proot-distro login "$DISTRO" -- which pacman >/dev/null 2>&1; then
-CMD="pacman -Sy --noconfirm $PKG"
+ CMD="pacman -Sy --noconfirm $PKG"
 elif proot-distro login "$DISTRO" -- which apk >/dev/null 2>&1; then
-CMD="apk add $PKG"
+ CMD="apk add $PKG"
 else
-CMD="apt update && apt install -y $PKG"
+ CMD="apt update && apt install -y $PKG"
 fi
 proot-distro login "$DISTRO" -- bash -c "$CMD"
 }
@@ -202,8 +201,6 @@ bash ~/start-desktop.sh
 EOF
 
 chmod +x $PREFIX/bin/desktop
-
-rm -rf ~/Termux-Desktops-Installer
 
 echo -e "${G}INSTALL COMPLETE ✅${NC}"
 echo -e "${C}Run:${NC} desktop"
