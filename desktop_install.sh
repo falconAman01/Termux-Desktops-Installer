@@ -1,25 +1,16 @@
 #!/data/data/com.termux/files/usr/bin/bash
-set -euo pipefail
+set -e
 
-VERSION="3.3"
+VERSION="FINAL"
 
-G='\033[1;32m';Y='\033[1;33m';C='\033[1;36m';R='\033[1;31m';NC='\033[0m'
-trap 'echo -e "${R}[ERROR] Installer stopped safely${NC}"' ERR
-
-# ========= ANIMATED BANNER =========
-typewriter(){
- text="$1"
- for ((i=0;i<${#text};i++)); do
-  printf "%s" "${text:$i:1}"
-  sleep 0.01
- done
- echo
-}
+G='\033[1;32m'
+Y='\033[1;33m'
+C='\033[1;36m'
+R='\033[1;31m'
+NC='\033[0m'
 
 clear
-echo -e "${C}"
-typewriter ">>> AMAN CYBER INSTALLER v$VERSION <<<"
-echo -e "${NC}"
+echo -e "${C}>>> AMAN CYBER INSTALLER $VERSION <<<${NC}"
 
 # ========= BASIC SETUP =========
 touch ~/.hushlogin
@@ -28,7 +19,7 @@ termux-setup-storage || true
 pkg update -y || true
 pkg install -y x11-repo tur-repo pulseaudio proot-distro wget git curl || true
 
-# ===== AUTO DETECT TERMUX X11 =====
+# termux-x11 auto detect
 if pkg search termux-x11-nightly >/dev/null 2>&1; then
  pkg install -y termux-x11-nightly || pkg install -y termux-x11 || true
 else
@@ -42,13 +33,21 @@ echo -e "\033[1;33mScript By: falconAman01"
 echo "https://github.com/falconAman01\033[0m"
 EOF
 
-# ========= DYNAMIC DISTRO LIST =========
+# ========= LOAD DISTRO LIST =========
 clear
 echo -e "${C}Available Proot Distros:${NC}"
 
-mapfile -t DISTROS < <(proot-distro list | grep -E '\* ' | sed -E 's/.*< ([^ ]+) >/\1/')
+DISTROS=()
 
-if [ "${#DISTROS[@]}" -eq 0 ]; then
+# SAFE PARSE (works on all proot versions)
+while read -r line; do
+ alias=$(echo "$line" | sed -n 's/.*< \(.*\) >/\1/p')
+ if [ -n "$alias" ]; then
+  DISTROS+=("$alias")
+ fi
+done < <(proot-distro list)
+
+if [ ${#DISTROS[@]} -eq 0 ]; then
  echo -e "${R}Failed to load distro list${NC}"
  exit 1
 fi
@@ -63,13 +62,13 @@ echo -e "${R}$num) kali nethunter${NC}"
 echo ""
 read -p "Choice (number): " dchoice
 
-# ========= VALIDATION =========
+# ========= INPUT CHECK =========
 if ! [[ "$dchoice" =~ ^[0-9]+$ ]]; then
  echo -e "${R}Invalid input${NC}"
  exit 1
 fi
 
-# ========= KALI OPTION =========
+# ========= KALI INSTALL =========
 if [ "$dchoice" -eq "$num" ]; then
 
 echo -e "${Y}Installing Kali NetHunter...${NC}"
@@ -111,20 +110,17 @@ TERM=$TERM \
 LANG=C.UTF-8 \
 $start"
 
-cmd="$@"
 if [ "$#" == "0" ]; then
  exec $cmdline
 else
- $cmdline -c "$cmd"
+ $cmdline -c "$@"
 fi
 EOF
 
 chmod +x start-kali.sh
 
-cat << 'EOF' > $PREFIX/bin/kali
-#!/data/data/com.termux/files/usr/bin/bash
-bash ~/start-kali.sh
-EOF
+echo '#!/data/data/com.termux/files/usr/bin/bash
+bash ~/start-kali.sh' > $PREFIX/bin/kali
 
 chmod +x $PREFIX/bin/kali
 
@@ -135,7 +131,6 @@ fi
 # ========= SELECT DISTRO =========
 index=$((dchoice-1))
 DISTRO="${DISTROS[$index]}"
-
 echo -e "${G}Selected: $DISTRO${NC}"
 
 # ========= DESKTOP MENU =========
@@ -173,14 +168,10 @@ proot-distro login "$DISTRO" -- bash -c "$CMD"
 }
 
 echo -e "${Y}Installing Desktop...${NC}"
-install_desktop || install_desktop "xfce4 xfce4-goodies" || install_desktop lxde || install_desktop lxqt
+install_desktop
 
-# ========= DESKTOP LAUNCHER =========
 cat << EOF > start-desktop.sh
 #!/data/data/com.termux/files/usr/bin/bash
-clear
-echo -e "\033[1;36m🔥 AMAN NEON DESKTOP 🔥\033[0m"
-
 pkill -f termux.x11 2>/dev/null || true
 pulseaudio --start --exit-idle-time=-1
 
@@ -195,10 +186,8 @@ EOF
 
 chmod +x start-desktop.sh
 
-cat << 'EOF' > $PREFIX/bin/desktop
-#!/data/data/com.termux/files/usr/bin/bash
-bash ~/start-desktop.sh
-EOF
+echo '#!/data/data/com.termux/files/usr/bin/bash
+bash ~/start-desktop.sh' > $PREFIX/bin/desktop
 
 chmod +x $PREFIX/bin/desktop
 
