@@ -1,8 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -e
 
-VERSION="FINAL"
-
 G='\033[1;32m'
 Y='\033[1;33m'
 C='\033[1;36m'
@@ -10,66 +8,52 @@ R='\033[1;31m'
 NC='\033[0m'
 
 clear
-echo -e "${C}>>> AMAN CYBER INSTALLER $VERSION <<<${NC}"
+echo -e "${C}>>> AMAN CYBER INSTALLER FINAL <<<${NC}"
 
-# ========= BASIC SETUP =========
+# ===== BASIC SETUP =====
 touch ~/.hushlogin
 termux-setup-storage || true
 
 pkg update -y || true
-pkg install -y x11-repo tur-repo pulseaudio proot-distro wget git curl || true
+pkg install -y proot-distro pulseaudio wget git curl x11-repo tur-repo termux-x11 || true
 
-# termux-x11 auto detect
-if pkg search termux-x11-nightly >/dev/null 2>&1; then
- pkg install -y termux-x11-nightly || pkg install -y termux-x11 || true
-else
- pkg install -y termux-x11 || true
-fi
-
-# ========= LOGIN BANNER =========
-grep -q "AMAN CYBER TERMINAL" ~/.bashrc || cat << 'EOF' >> ~/.bashrc
-echo -e "\033[1;36m🔥 AMAN CYBER TERMINAL 🔥\033[0m"
-echo -e "\033[1;33mScript By: falconAman01"
-echo "https://github.com/falconAman01\033[0m"
-EOF
-
-# ========= LOAD DISTRO LIST =========
+# ===== DISTRO LIST LOAD (FIXED) =====
 clear
 echo -e "${C}Available Proot Distros:${NC}"
 
 DISTROS=()
 
-# SAFE PARSE (works on all proot versions)
-while read -r line; do
- alias=$(echo "$line" | sed -n 's/.*< \(.*\) >/\1/p')
- if [ -n "$alias" ]; then
-  DISTROS+=("$alias")
- fi
-done < <(proot-distro list)
+while IFS= read -r line; do
+    alias=$(echo "$line" | sed -n 's/.*< *\([^ >]*\) *>.*/\1/p')
+    if [ -n "$alias" ]; then
+        DISTROS+=("$alias")
+    fi
+done <<< "$(proot-distro list)"
 
 if [ ${#DISTROS[@]} -eq 0 ]; then
- echo -e "${R}Failed to load distro list${NC}"
- exit 1
+    echo -e "${R}Failed to load distro list${NC}"
+    exit 1
 fi
 
-num=1
+i=1
 for d in "${DISTROS[@]}"; do
- echo "$num) $d"
- ((num++))
+    echo "$i) $d"
+    ((i++))
 done
 
-echo -e "${R}$num) kali nethunter${NC}"
+echo -e "${R}$i) kali nethunter${NC}"
 echo ""
-read -p "Choice (number): " dchoice
 
-# ========= INPUT CHECK =========
-if ! [[ "$dchoice" =~ ^[0-9]+$ ]]; then
- echo -e "${R}Invalid input${NC}"
- exit 1
+read -p "Choice (number): " choice
+
+# ===== INPUT CHECK =====
+if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+    echo -e "${R}Invalid input${NC}"
+    exit 1
 fi
 
-# ========= KALI INSTALL =========
-if [ "$dchoice" -eq "$num" ]; then
+# ===== KALI OPTION =====
+if [ "$choice" -eq "$i" ]; then
 
 echo -e "${Y}Installing Kali NetHunter...${NC}"
 
@@ -128,59 +112,39 @@ echo -e "${G}Kali Installed. Run: kali${NC}"
 exit 0
 fi
 
-# ========= SELECT DISTRO =========
-index=$((dchoice-1))
+# ===== SELECT DISTRO =====
+index=$((choice-1))
 DISTRO="${DISTROS[$index]}"
+
 echo -e "${G}Selected: $DISTRO${NC}"
 
-# ========= DESKTOP MENU =========
+# ===== DESKTOP MENU =====
 echo ""
-echo "1) gnome"
-echo "2) xfce4"
-echo "3) lxde"
-echo "4) cinnamon"
-echo "5) kde"
-echo "6) lxqt"
+echo "1) xfce4"
+echo "2) lxde"
+echo "3) lxqt"
 
-read -p "Desktop Choice: " dechoice
+read -p "Desktop Choice: " dchoice
 
-case $dechoice in
-1) PKG="gnome"; STARTCMD="gnome-session";;
-2) PKG="xfce4 xfce4-goodies"; STARTCMD="startxfce4";;
-3) PKG="lxde"; STARTCMD="startlxde";;
-4) PKG="cinnamon"; STARTCMD="cinnamon-session";;
-5) PKG="plasma"; STARTCMD="startplasma-x11";;
-6) PKG="lxqt"; STARTCMD="startlxqt";;
+case $dchoice in
+1) PKG="xfce4 xfce4-goodies"; STARTCMD="startxfce4";;
+2) PKG="lxde"; STARTCMD="startlxde";;
+3) PKG="lxqt"; STARTCMD="startlxqt";;
 *) echo "Invalid"; exit 1;;
 esac
 
 proot-distro install "$DISTRO" || true
 
-install_desktop(){
-if proot-distro login "$DISTRO" -- which pacman >/dev/null 2>&1; then
- CMD="pacman -Sy --noconfirm $PKG"
-elif proot-distro login "$DISTRO" -- which apk >/dev/null 2>&1; then
- CMD="apk add $PKG"
-else
- CMD="apt update && apt install -y $PKG"
-fi
-proot-distro login "$DISTRO" -- bash -c "$CMD"
-}
-
-echo -e "${Y}Installing Desktop...${NC}"
-install_desktop
+proot-distro login "$DISTRO" -- bash -c "apt update && apt install -y $PKG" || true
 
 cat << EOF > start-desktop.sh
 #!/data/data/com.termux/files/usr/bin/bash
 pkill -f termux.x11 2>/dev/null || true
 pulseaudio --start --exit-idle-time=-1
-
 export XDG_RUNTIME_DIR=\${TMPDIR}
-termux-x11 :0 >/dev/null &
+termux-x11 :0 &
 sleep 3
-
-am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
-
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity
 proot-distro login $DISTRO --shared-tmp -- /bin/bash -c "export DISPLAY=:0 && $STARTCMD"
 EOF
 
