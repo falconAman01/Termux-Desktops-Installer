@@ -1,8 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-VERSION="3.1"
-REPO="https://raw.githubusercontent.com/falconAman01/aman-installer/main/aman-final.sh"
+VERSION="3.2"
 
 G='\033[1;32m';Y='\033[1;33m';C='\033[1;36m';R='\033[1;31m';NC='\033[0m'
 trap 'echo -e "${R}[ERROR] Installer stopped safely${NC}"' ERR
@@ -22,33 +21,22 @@ echo -e "${C}"
 typewriter ">>> AMAN CYBER INSTALLER v$VERSION <<<"
 echo -e "${NC}"
 
-# ========= AUTO UPDATE =========
-LATEST=$(curl -fsL "$REPO" | grep VERSION | head -1 | cut -d'"' -f2 || echo "$VERSION")
-if [ "$LATEST" != "$VERSION" ]; then
- echo -e "${Y}Updating installer...${NC}"
- curl -L "$REPO" -o "$0"
- chmod +x "$0"
- exec "$0"
-fi
-
 # ========= BASIC SETUP =========
 touch ~/.hushlogin
 termux-setup-storage || true
 
 pkg update -y || true
-
-# ===== AUTO DETECT TERMUX X11 PACKAGE =====
 pkg install -y x11-repo tur-repo pulseaudio proot-distro wget git curl || true
 
+# ---- auto detect termux-x11 package ----
 if pkg search termux-x11-nightly >/dev/null 2>&1; then
  pkg install -y termux-x11-nightly || pkg install -y termux-x11 || true
 else
  pkg install -y termux-x11 || true
 fi
 
-# ========= AUTO LOGIN BANNER =========
+# ========= LOGIN BANNER =========
 grep -q "AMAN CYBER TERMINAL" ~/.bashrc || cat << 'EOF' >> ~/.bashrc
-
 echo -e "\033[1;36m🔥 AMAN CYBER TERMINAL 🔥\033[0m"
 echo -e "\033[1;33mScript By: falconAman01"
 echo "https://github.com/falconAman01\033[0m"
@@ -58,20 +46,26 @@ EOF
 clear
 echo -e "${C}Available Proot Distros:${NC}"
 
-mapfile -t DISTROS < <(proot-distro list | awk '/</{print $NF}' | tr -d '><')
+mapfile -t DISTROS < <(proot-distro list | grep "<" | sed -E 's/.*< ([^ ]+) >/\1/')
 
-i=1
-for d in "${DISTROS[@]}"; do
- echo "$i) $d"
- ((i++))
+count=1
+for distro in "${DISTROS[@]}"; do
+ echo "$count) $distro"
+ ((count++))
 done
 
-echo -e "${R}$i) kali nethunter${NC}"
+echo -e "${R}$count) kali nethunter${NC}"
+echo ""
+read -p "Choice (number): " dchoice
 
-read -p "Choice: " dchoice
+# ========= INPUT VALIDATION =========
+if ! [[ "$dchoice" =~ ^[0-9]+$ ]]; then
+ echo -e "${R}Invalid input!${NC}"
+ exit 1
+fi
 
-# ========= KALI INSTALL =========
-if [ "$dchoice" = "$i" ]; then
+# ========= KALI OPTION =========
+if [ "$dchoice" -eq "$count" ]; then
 
 echo -e "${Y}Installing Kali NetHunter...${NC}"
 
@@ -134,10 +128,19 @@ echo -e "${G}Kali Installed. Run: kali${NC}"
 exit 0
 fi
 
-DISTRO=${DISTROS[$((dchoice-1))]}
+# ========= SELECT DISTRO =========
+index=$((dchoice-1))
+
+if [ "$index" -lt 0 ] || [ "$index" -ge "${#DISTROS[@]}" ]; then
+ echo -e "${R}Invalid choice number${NC}"
+ exit 1
+fi
+
+DISTRO="${DISTROS[$index]}"
 echo -e "${G}Selected: $DISTRO${NC}"
 
 # ========= DESKTOP MENU =========
+echo ""
 echo "1) gnome"
 echo "2) xfce4"
 echo "3) lxde"
@@ -199,6 +202,7 @@ bash ~/start-desktop.sh
 EOF
 
 chmod +x $PREFIX/bin/desktop
+
 rm -rf ~/Termux-Desktops-Installer
 
 echo -e "${G}INSTALL COMPLETE ✅${NC}"
