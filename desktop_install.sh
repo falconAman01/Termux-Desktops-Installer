@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-VERSION="3.0"
+VERSION="3.1"
 REPO="https://raw.githubusercontent.com/falconAman01/aman-installer/main/aman-final.sh"
 
 G='\033[1;32m';Y='\033[1;33m';C='\033[1;36m';R='\033[1;31m';NC='\033[0m'
@@ -23,7 +23,7 @@ typewriter ">>> AMAN CYBER INSTALLER v$VERSION <<<"
 echo -e "${NC}"
 
 # ========= AUTO UPDATE =========
-LATEST=$(curl -s "$REPO" | grep VERSION | head -1 | cut -d'"' -f2 || echo "$VERSION")
+LATEST=$(curl -fsL "$REPO" | grep VERSION | head -1 | cut -d'"' -f2 || echo "$VERSION")
 if [ "$LATEST" != "$VERSION" ]; then
  echo -e "${Y}Updating installer...${NC}"
  curl -L "$REPO" -o "$0"
@@ -34,8 +34,17 @@ fi
 # ========= BASIC SETUP =========
 touch ~/.hushlogin
 termux-setup-storage || true
-pkg update -y
-pkg install -y x11-repo termux-x11-nightly tur-repo pulseaudio proot-distro wget git curl
+
+pkg update -y || true
+
+# ===== AUTO DETECT TERMUX X11 PACKAGE =====
+pkg install -y x11-repo tur-repo pulseaudio proot-distro wget git curl || true
+
+if pkg search termux-x11-nightly >/dev/null 2>&1; then
+ pkg install -y termux-x11-nightly || pkg install -y termux-x11 || true
+else
+ pkg install -y termux-x11 || true
+fi
 
 # ========= AUTO LOGIN BANNER =========
 grep -q "AMAN CYBER TERMINAL" ~/.bashrc || cat << 'EOF' >> ~/.bashrc
@@ -70,7 +79,7 @@ wget -O install-nethunter-termux https://offs.ec/2MceZWr
 chmod +x install-nethunter-termux
 ./install-nethunter-termux
 
-# ===== ONLY YOUR NET HUNTER START SCRIPT =====
+# ===== YOUR ORIGINAL START SCRIPT =====
 cat << 'EOF' > start-kali.sh
 #!/data/data/com.termux/files/usr/bin/bash -e
 cd ${HOME}
@@ -190,6 +199,7 @@ bash ~/start-desktop.sh
 EOF
 
 chmod +x $PREFIX/bin/desktop
+rm -rf ~/Termux-Desktops-Installer
 
 echo -e "${G}INSTALL COMPLETE ✅${NC}"
 echo -e "${C}Run:${NC} desktop"
